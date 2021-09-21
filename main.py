@@ -6,11 +6,16 @@ import yfinance as yf
 from datetime import datetime, timedelta
 plt.style.use('ggplot')
 import streamlit as st
+from sklearn.model_selection import train_test_split, GridSearchCV
+from xgboost import XGBRegressor
+
 
 import requests
 import os
 import sys
 import subprocess
+
+# import talib
 
 
 if not os.path.isdir("/tmp/ta-lib"):
@@ -57,7 +62,7 @@ def main():
 
     st.title("Simple Stock Backtesting")
     st.sidebar.markdown("# Simple Stock Backtesting for Any Asset", unsafe_allow_html=True)
-    select = st.sidebar.selectbox("Menu", ['About', 'EMA Crossover', 'MACD Crossover'])
+    select = st.sidebar.selectbox("Menu", ['About', 'EMA Crossover', 'MACD Crossover', 'Make A Prediction'])
 
     if select == 'EMA Crossover':
         ema_interface()
@@ -66,105 +71,9 @@ def main():
         macd_interface()
     if select == 'About':
         about()
+    if select == 'Make A Prediction':
+        make_pred()
 
-
-    # if st.button("Generate"):
-    #     try:
-    #         if strategy == 'EMA Crossover':
-    #             if short_window > 0 and long_window > 0:
-    #                 df, bt_test = ema_crossover(ticker, short_period=short_window, long_period=long_window, start=start,
-    #                                             end = end)
-    #                 bt_results = bt.run(bt_test)
-    #                 bt_results.prices.columns = ['Equity Progression']
-    #                 st.markdown(" #### Equity Progression for " + ticker + " between " + str(start) + " and " +
-    #                             str(end),
-    #                             unsafe_allow_html=True)
-    #                 st.line_chart(bt_results.prices)
-    #
-    #                 st.markdown("#### Buy/Sell Signals for " + ticker)
-    #
-    #                 fig, ax = plt.subplots()
-    #                 fig.set_figheight(12)
-    #                 fig.set_figwidth(20)
-    #                 ax.plot(df[['Price', 'EMA_short', 'EMA_long']])
-    #                 ax.legend(['Price', 'EMA_short', 'EMA_long'])
-    #                 ax.set_title("Crossover Signals for " + ticker)
-    #                 ax.set_xlabel("Date")
-    #                 ax.set_ylabel("Price")
-    #
-    #                 ax2 = ax.twinx()
-    #                 ax2.plot(df['Signal'], color='navy')
-    #                 ax2.set_ylabel("Signal")
-    #                 ax.legend(['Price', 'EMA_short', 'EMA_long'], loc='upper left')
-    #                 ax2.legend(['Buy/Sell Signal'], loc='lower right')
-    #
-    #                 st.pyplot(fig)
-    #
-    #             else:
-    #                 st.error("Please ensure you've chosen EMA periods greater than 2. Ideal values for short windows " +
-    #                          "are 5, 10, 15 etc. Ideal values for long windows are 40, 50, 60 and so on.")
-    #
-    #         if strategy == 'MACD':
-    #             df = get_stock_data(ticker, start, end)
-    #
-    #             macd, signal, hist = talib.MACD(df.Close)
-    #             df['MACD'] = macd
-    #             df['signal'] = signal
-    #
-    #             a = MACD(df)
-    #             df['Buy_Signal_Price'] = a[1]
-    #             df['Sell_Signal_Price'] = a[0]
-    #
-    #             st.line_chart(df['Adj Close'])
-    #
-    #             # MACD strategy visualization:
-    #
-    #
-    #             st.write("MACD Crossover Lines with 9 EMA for " + ticker)
-    #
-    #             st.line_chart(df[['MACD', 'signal']])
-                #
-                # fig1, ax = plt.subplots()
-                #
-                # fig1.set_figheight(6)
-                # fig1.set_figwidth(12)
-                # ax.plot(df['MACD'], label='MACD', color='red')
-                # ax.plot(df['signal'], label='Signal', color='navy')
-                # ax.set_xlabel("Date")
-                # ax.set_title("MACD with 9 EMA Signal Line for " + ticker)
-                # ax.legend()
-                #
-                # st.pyplot(fig1)
-
-
-
-
-
-                # Buy/Sell signals here
-                #
-                # st.write("Buy/Sell signals for " + ticker)
-                #
-                # fig2, ax = plt.subplots()
-                # fig2.set_figheight(6)
-                # fig2.set_figwidth(12)
-                #
-                # ax.scatter(df.index, df.Sell_Signal_Price, color='green', marker='^', label='Buy')
-                # ax.scatter(df.index, df.Buy_Signal_Price, color='red', marker='v', label='Sell')
-                # ax.plot(df['Close'], label='Close Price ($)', alpha=.35)
-                # ax.set_title("MACD Buy/Sell Strategy for " + ticker)
-                # ax.set_xlabel("Date")
-                # ax.set_ylabel("Price ($)")
-                # ax.legend()
-                #
-                # st.pyplot(fig2)
-
-
-
-
-        #     else:
-        #         st.error("Please ensure you've selected a valid date range for a valid ticker.")
-        # except ValueError:
-        #     st.error("Please Ensure All Entries Are Filled Correctly.")
 
 
 
@@ -180,8 +89,8 @@ def ema_interface():
     start = st.date_input("Start Date", value=(datetime.today() - timedelta(5 * 365)))
     end = st.date_input("End Date")
 
-    short_window = st.number_input("Short EMA (Only Applies for EMA Crossover Strategy)")
-    long_window = st.number_input("Long EMA (Only Applies for EMA Crossover Strategy")
+    short_window = st.number_input("Short EMA (Only Applies for EMA Crossover Strategy)", value=10)
+    long_window = st.number_input("Long EMA (Only Applies for EMA Crossover Strategy", value=40)
 
     if st.button("Generate"):
         try:
@@ -234,7 +143,7 @@ def macd_interface():
     start = st.date_input("Start Date", value=(datetime.today() - timedelta(5 * 365)))
     end = st.date_input("End Date")
 
-    ema_window = st.number_input("Choose an EMA Window:")
+    ema_window = st.number_input("Choose an EMA Window:", value=9)
     try:
         if st.button("Generate"):
             if ticker == '':
@@ -373,6 +282,86 @@ def about():
                 " app for non-serious stock backtesting that gives the user an easy-to-use interface, rather than being housed"
                 " exclusively in a script.")
     st.markdown("Thanks for checking it out!")
+
+
+    st.write()
+    st.write()
+    st.markdown("**Disclaimer: None of the information taken from this app should be considered financial advise.**")
+
+
+def make_pred():
+    st.title("Make a Weak Prediction using Machine Learning")
+
+    st.markdown("#### Type in a ticker, and select the date range for which you would like to perform this test."
+                " Suggested EMA values for this test are smaller value, such as 5 or 9 .(We used 9)")
+    ticker = st.text_input("Ticker")
+    ticker.capitalize()
+
+    start = st.date_input("Start Date", value=(datetime.today() - timedelta(4 * 365)))
+    end = st.date_input("End Date")
+
+    future_days = st.number_input("How many days in the future do you want to look? (We recommend 30 or less.."
+                                  " Things get really wonky after that.)", value=5)
+
+    if st.button("Generate"):
+        generate_pred(ticker, start, end, int(future_days))
+
+
+def generate_pred(ticker, start, end, future_days):
+    df = yf.download(ticker, start=start, end=end, interval='1d')
+    df.dropna(inplace=True)
+    df[str(future_days) + '_Day_Price_Forecast'] = df[['Close']].shift(-future_days)
+    X = np.array(df[['Close']])
+    X = X[:df.shape[0] - future_days]
+    y = np.array(df[str(future_days) + '_Day_Price_Forecast'])
+    y = y[:-future_days]
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+
+    xgbr = XGBRegressor()
+    xgbr.fit(X_train, y_train)
+
+    confidence = xgbr.score(X_test, y_test)
+    xgb_preds = xgbr.predict(X_test)
+    future_preds = xgbr.predict(X[-future_days:])
+    future_preds = pd.DataFrame(future_preds, index=range(len(df), len(df) + future_days))
+    df.reset_index(inplace=True)
+
+    st.write("Actual Price Movement vs. Predicted Price Movement for " + ticker)
+
+    fig, ax = plt.subplots()
+    fig.set_figheight(6)
+    fig.set_figwidth(12)
+    ax.plot(xgb_preds, color='navy', label='Prediction')
+    ax.plot(y_test, color='darkred', label='Actual')
+    ax.set_xlabel("Timeframe (Days)")
+    ax.set_ylabel("Closing Price ($)")
+
+    ax.set_title("Actual Prices vs. Prediction for " + ticker + " using XGBoost Regressor")
+    ax.legend()
+
+    st.pyplot(fig)
+
+    st.markdown("#### " + str(future_days) + " day prediction for " + ticker)
+
+    fig, ax = plt.subplots()
+    fig.set_figheight(6)
+    fig.set_figwidth(12)
+    ax.plot(df.Close.iloc[-200:], label='Closing Price')
+    ax.plot(future_preds, label=str(future_days) + ' Day Prediction')
+    ax.scatter(x=df.index[-1], y=df.Close.iloc[-1], color='green', s=70, label='Last Price: ' + str(round(df.Close.iloc[-1], 4)))
+
+    ax.scatter(x=future_preds.sort_values(0).index[0], y=future_preds.sort_values(0).iloc[0],
+               label='Lowest Price: ' + str(round(future_preds.sort_values(0).iloc[0][0], 4)), color='red', s=70)
+    ax.set_xlabel("Timeframe (Days)")
+    ax.set_ylabel("Closing Price ($)")
+    ax.legend()
+    ax.set_title(str(future_days) + " Day Prediction for " + ticker + " ----- Confidence: " + str(
+        round(confidence, 3) * 100) + "%")
+
+    st.pyplot(fig)
+
+
 
 
 if __name__ == "__main__":
