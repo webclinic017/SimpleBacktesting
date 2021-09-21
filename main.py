@@ -83,6 +83,12 @@ def ema_interface():
 
     st.markdown("#### Type in a ticker, and select the date range for which you would like to perform this test."
                 " Suggested EMA windows are 5/20, 10/40, 20/70 etc.", unsafe_allow_html=True)
+
+    st.markdown("This strategy is defined by utilizing two separate EMA Windows, short and long. When the short window "
+                "cross the long window going up, this is a 'buy' signal. When the short window cross the long window "
+                "going "
+                "down, "
+                " this is a 'Sell' signal.", unsafe_allow_html=True)
     ticker = st.text_input("Ticker")
     ticker.capitalize()
 
@@ -136,7 +142,12 @@ def macd_interface():
     st.title("MACD/EMA Crossover Strategy.")
 
     st.markdown("#### Type in a ticker, and select the date range for which you would like to perform this test."
-                " Suggested EMA values for this test are smaller value, such as 5 or 9 .(We used 9)")
+                " Suggested EMA values for this test are smaller value, such as 5 or 9.")
+
+    st.markdown("This strategy is defined by observing the behavior of the MACD line in relation to a short EMA line. "
+                "When the MACD line crosses the EMA line going up, this is a 'Buy' signal. When the MACD line crosses "
+                "the "
+                "EMA line going down, this is a 'Sell' signal.")
     ticker = st.text_input("Ticker")
     ticker.capitalize()
 
@@ -293,7 +304,10 @@ def make_pred():
     st.title("Make a Weak Prediction using Machine Learning")
 
     st.markdown("#### Type in a ticker, and select the date range for which you would like to perform this test."
-                " Suggested EMA values for this test are smaller value, such as 5 or 9 .(We used 9)")
+                " The larger the date range, the better this machine learning algorithm is likely to perform. "
+                "I recommend only doing between 5 and 30 day predictions.")
+
+    st.markdown("REMEMBER: Crypto tickers use '-USD' notation (Ex. BTC-USD, DOGE-USD, ETH-USD etc.)")
     ticker = st.text_input("Ticker")
     ticker.capitalize()
 
