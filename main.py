@@ -89,6 +89,11 @@ def ema_interface():
                 "going "
                 "down, "
                 " this is a 'Sell' signal.", unsafe_allow_html=True)
+
+    st.write("\n")
+
+    st.markdown("**REMEMBER**: Crypto tickers use '-USD' notation (Ex. BTC-USD, DOGE-USD, ETH-USD etc.)")
+
     ticker = st.text_input("Ticker")
     ticker.capitalize()
 
@@ -150,6 +155,12 @@ def macd_interface():
                 "When the MACD line crosses the EMA line going up, this is a 'Buy' signal. When the MACD line crosses "
                 "the "
                 "EMA line going down, this is a 'Sell' signal.")
+
+    st.write("\n")
+
+    st.markdown("**REMEMBER**: Crypto tickers use '-USD' notation (Ex. BTC-USD, DOGE-USD, ETH-USD etc.)")
+
+
     ticker = st.text_input("Ticker")
     ticker.capitalize()
 
@@ -311,7 +322,7 @@ def make_pred():
 
     st.write("\n")
 
-    st.markdown("REMEMBER: Crypto tickers use '-USD' notation (Ex. BTC-USD, DOGE-USD, ETH-USD etc.)")
+    st.markdown("**REMEMBER**: Crypto tickers use '-USD' notation (Ex. BTC-USD, DOGE-USD, ETH-USD etc.)")
     ticker = st.text_input("Ticker")
     ticker.capitalize()
 
