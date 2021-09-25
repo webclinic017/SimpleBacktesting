@@ -62,7 +62,8 @@ def main():
 
     st.title("Simple Stock Backtesting")
     st.sidebar.markdown("# Simple Stock Backtesting for Any Asset", unsafe_allow_html=True)
-    select = st.sidebar.selectbox("Menu", ['About', 'EMA Crossover', 'MACD Crossover', 'Make A Prediction'])
+    select = st.sidebar.selectbox("Menu", ['About', 'EMA Crossover', 'MACD Crossover', 'On-Balance-Volume Crossover',
+                                           'Make A Prediction'])
 
     if select == 'EMA Crossover':
         ema_interface()
@@ -73,6 +74,8 @@ def main():
         about()
     if select == 'Make A Prediction':
         make_pred()
+    if select == 'On-Balance-Volume Crossover':
+        obv()
 
 
 
@@ -391,6 +394,110 @@ def generate_pred(ticker, start, end, future_days):
     st.pyplot(fig)
 
 
+def obv():
+    st.title("On Balance Volume Crossover")
+
+    st.markdown("#### Type in a ticker, and select the date range for which you would like to perform this test."
+                " Suggested EMA windows are 5/20, 10/40, 20/70 etc.", unsafe_allow_html=True)
+    st.write("\n")
+    st.markdown("This strategy is defined by utilizing the 'On Balance Volume' for the chosen asset. OBV is a momentum"
+                " indicator that uses volume flow to predict changes in stock price. The strategy entails calculating "
+                "the OBV, and subsequently the exponential moving average of the OBV. When the OBV crosses above it's "
+                "EMA, this is a buy singal. When it crosses below, this is a sell signal. We used an EMA window of "
+                "20.")
+
+    st.write("\n")
+
+    st.markdown("**REMEMBER**: Crypto tickers use '-USD' notation (Ex. BTC-USD, DOGE-USD, ETH-USD etc.)")
+
+    ticker = st.text_input("Ticker")
+    ticker.capitalize()
+
+    start = st.date_input("Start Date", value=(datetime.today() - timedelta(5 * 365)))
+    end = st.date_input("End Date")
+
+    EMA_LENGTH = st.number_input("Short EMA (Only Applies for EMA Crossover Strategy)", value=20)
+
+    if st.button("Generate"):
+        if EMA_LENGTH > 1 and start < end:
+            df = get_obv(ticker, start, end, EMA_LENGTH)
+
+            st.markdown("#### Closing Price for " + ticker)
+            st.line_chart(df['Adj Close'])
+
+            st.markdown("### OBV and OBV EMA for " + ticker + " with " + str(EMA_LENGTH) + " day EMA window.")
+
+            st.line_chart(df[['OBV', 'OBV_EMA']])
+
+
+            st.markdown("### Buy/Sell signals for " + ticker + " based on OBV Crossover:")
+
+            fig, ax = plt.subplots()
+
+            fig.set_figheight(6)
+            fig.set_figwidth(16)
+            ax.scatter(df.index, df['Buy_Signal_Price'], color='green', label='Buy Signal', marker='^', alpha=.7)
+            ax.scatter(df.index, df['Sell_Signal_Price'], color='red', label='Sell Signal', marker='v', alpha=.7)
+            ax.plot(df['Close'], label='Close Price', alpha=0.35)
+            ax.set_title("Buy/Sell Signals for " + ticker)
+            ax.set_xlabel("Date", fontsize=18)
+            ax.set_ylabel("Closing Price ($)", fontsize=18)
+            ax.legend()
+
+            st.pyplot(fig)
+        else:
+            st.error("Please ensure you're using valid start/end dates and that your EMA window is greater than 1.")
+
+
+
+
+def get_obv(ticker, start, end, EMA_Length):
+    df = yf.download(ticker, start=start, end=end)
+
+    OBV = []
+    OBV.append(0)
+    for i in range(1, len(df.Close)):
+        if df.Close[i] > df.Close[i - 1]:  # If the closing price is above the prior close price
+            OBV.append(OBV[-1] + df.Volume[i])  # then: Current OBV = Previous OBV + Current Volume
+        elif df.Close[i] < df.Close[i - 1]:
+            OBV.append(OBV[-1] - df.Volume[i])
+        else:
+            OBV.append(OBV[-1])
+
+    # Store OBV and OBV_EMA
+    df['OBV'] = OBV
+    df['OBV_EMA'] = df['OBV'].ewm(com=EMA_Length).mean()
+
+    x = obv_buy_sell(df, 'OBV', 'OBV_EMA')
+    df['Buy_Signal_Price'] = x[0]
+    df['Sell_Signal_Price'] = x[1]
+
+    return df
+
+
+
+def obv_buy_sell(signal, col1, col2):
+    sigPriceBuy = []
+    sigPriceSell = []
+    flag = -1  # A flag for the trend upward/downward
+    # Loop through the length of the data set
+    for i in range(0, len(signal)):
+        # if OBV > OBV_EMA  and flag != 1 then buy else sell
+        if signal[col1][i] > signal[col2][i] and flag != 1:
+            sigPriceBuy.append(signal['Close'][i])
+            sigPriceSell.append(np.nan)
+            flag = 1
+        # else  if OBV < OBV_EMA  and flag != 0 then sell else buy
+        elif signal[col1][i] < signal[col2][i] and flag != 0:
+            sigPriceSell.append(signal['Close'][i])
+            sigPriceBuy.append(np.nan)
+            flag = 0
+        # else   OBV == OBV_EMA  so append NaN
+        else:
+            sigPriceBuy.append(np.nan)
+            sigPriceSell.append(np.nan)
+
+    return (sigPriceBuy, sigPriceSell)
 
 
 if __name__ == "__main__":
